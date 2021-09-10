@@ -1,84 +1,145 @@
+# Tested with Julia 1.6.1
+
 using DataFrames, RDatasets
 using CSV
 using Statistics, StatsBase, Bootstrap
 using Plots, StatsPlots, ColorSchemes
 
-
-maxi_plot = CSV.read("Potato Trial Spraying - Yield Max.csv", header = 1, skipto = 3, DataFrame)
+# Read data and group into treatments
+maxi_plot = CSV.read("Potato Trial Spraying - Yield Max.csv", header = 1, skipto = 3, DataFrame, missingstrings=["NA", "na", "n/a", "missing"])
+dropmissing!(maxi_plot)
 gdf       = groupby( maxi_plot, :Treatment)
-display(gdf)
 
-# Calculate mean values of treatments
-gdf_blight  = sort( combine(gdf, Symbol("Adjusted Blighted") =>  mean), Symbol("Adjusted Blighted_mean"), rev = false)
-gdf_market  = sort( combine(gdf, Symbol("Adjusted Marketable") => mean ), Symbol("Adjusted Marketable_mean"), rev = true)
-gdf_small   = sort( combine(gdf, Symbol("Adjusted Small") => mean ), Symbol("Adjusted Small_mean"), rev = true)
-gdf_total   = sort( combine(gdf, Symbol("Adjusted Total") => mean ), Symbol("Adjusted Total_mean"), rev = true)
-
-# Calculate mean and variance of treatments
+# Calculate mean, variance and standard deviation of treatments
 gdf_blight  = combine(gdf, Symbol("Adjusted Blighted") =>  mean)
 display(combine(gdf, Symbol("Adjusted Blighted") =>  var))
 gdf_blight[!,:var] = combine(gdf, Symbol("Adjusted Blighted") =>  var)[:,2]
 gdf_blight[!,:sd] = combine(gdf, Symbol("Adjusted Blighted") =>  (s -> sqrt(var(s))))[:,2]
 rename!(gdf_blight, Symbol("Adjusted Blighted_mean") => :mean)
+sort!(gdf_blight, :mean, rev = false)
 
 gdf_market  = combine(gdf, Symbol("Adjusted Marketable") =>  mean)
 display(combine(gdf, Symbol("Adjusted Marketable") =>  var))
 gdf_market[!,:var] = combine(gdf, Symbol("Adjusted Marketable") =>  var)[:,2]
 gdf_market[!,:sd] = combine(gdf, Symbol("Adjusted Marketable") =>  (s -> sqrt(var(s))))[:,2]
 rename!(gdf_market, Symbol("Adjusted Marketable_mean") => :mean)
+sort!(gdf_market, :mean, rev = true)
 
 gdf_small  = combine(gdf, Symbol("Adjusted Small") =>  mean)
 display(combine(gdf, Symbol("Adjusted Small") =>  var))
 gdf_small[!,:var] = combine(gdf, Symbol("Adjusted Small") =>  var)[:,2]
 gdf_small[!,:sd] = combine(gdf, Symbol("Adjusted Small") =>  (s -> sqrt(var(s))))[:,2]
 rename!(gdf_small, Symbol("Adjusted Small_mean") => :mean)
-
-gdf_total   = combine(gdf, Symbol("Adjusted Total") =>  mean)
-display(combine(gdf, Symbol("Adjusted Small") =>  var))
-gdf_total[!,:var] = combine(gdf, Symbol("Adjusted Total") =>  var)[:,2]
-gdf_total[!,:sd] = combine(gdf, Symbol("Adjusted Total") =>  (s -> sqrt(var(s))))[:,2]
-rename!(gdf_total, Symbol("Adjusted Total_mean") => :mean)
-
+sort!(gdf_small, :mean, rev = true)
+#
+# gdf_total   = combine(gdf, Symbol("Adjusted Total") =>  mean)
+# display(combine(gdf, Symbol("Adjusted Small") =>  var))
+# gdf_total[!,:var] = combine(gdf, Symbol("Adjusted Total") =>  var)[:,2]
+# gdf_total[!,:sd] = combine(gdf, Symbol("Adjusted Total") =>  (s -> sqrt(var(s))))[:,2]
+# rename!(gdf_total, Symbol("Adjusted Total_mean") => :mean)
+# sort!(gdf_total, :mean, rev = true)
 
 # Show mean values
-display(sort(gdf_blight,:mean, rev = false) )
-display(sort(gdf_small,:mean, rev = true) )
-display(sort(gdf_market,:mean, rev = true) )
+display(gdf_blight)
+display(gdf_small)
+display(gdf_market)
 
 # Query mean value of treatment "Water" through list comprehension
 mean_m_water = gdf_market[ [i in ["Manzate"] for i in gdf_market.Treatment ],: ]
 mean_b_water = gdf_blight[ [i in ["Manzate"] for i in gdf_blight.Treatment ],: ]
 mean_s_water = gdf_small[ [i in ["Manzate"] for i in gdf_small.Treatment ],: ]
 
-# Calculate v per treatment
+# Create big dataframe for calculation of proportional data
+gdf_all = innerjoin(gdf_market, gdf_small, gdf_blight, on =:Treatment, makeunique = true)
+rename!(gdf_all,
+        :mean => :mean_market,
+        :var => :var_market,
+        :sd => :sd_market,
+        :mean_1 => :mean_small,
+        :var_1 => :var_small,
+        :sd_1 => :sd_small,
+        :mean_2 => :mean_blight,
+        :var_2 => :var_blight,
+        :sd_2 => :sd_blight
+)
+
+# Calculate fractional values of mean values per treatment
+mean_m_frac = transform(gdf_all,
+                         [:mean_market, :mean_small, :mean_blight] =>
+                         ( (m,s,b) -> (m./(m+s+b))) => :mean_m_frac
+)
+mean_s_frac = transform(gdf_all,
+                        [:mean_market, :mean_small, :mean_blight] =>
+                        ( (m,s,b) -> (s./(m+s+b))) => :mean_s_frac
+)
+mean_b_frac = transform(gdf_all,
+                        [:mean_market, :mean_small, :mean_blight] =>
+                        ( (m,s,b) -> (b./(m+s+b))) => :mean_b_frac
+)
+
+# Trim dataframe
+select!(mean_m_frac, Not(:mean_market))
+select!(mean_m_frac, Not(:var_market))
+select!(mean_m_frac, Not(:sd_market))
+select!(mean_m_frac, Not(:mean_small))
+select!(mean_m_frac, Not(:var_small))
+select!(mean_m_frac, Not(:sd_small))
+select!(mean_m_frac, Not(:mean_blight))
+select!(mean_m_frac, Not(:var_blight))
+select!(mean_m_frac, Not(:sd_blight))
+select!(mean_s_frac, Not(:mean_market))
+select!(mean_s_frac, Not(:var_market))
+select!(mean_s_frac, Not(:sd_market))
+select!(mean_s_frac, Not(:mean_small))
+select!(mean_s_frac, Not(:var_small))
+select!(mean_s_frac, Not(:sd_small))
+select!(mean_s_frac, Not(:mean_blight))
+select!(mean_s_frac, Not(:var_blight))
+select!(mean_s_frac, Not(:sd_blight))
+select!(mean_b_frac, Not(:mean_market))
+select!(mean_b_frac, Not(:var_market))
+select!(mean_b_frac, Not(:sd_market))
+select!(mean_b_frac, Not(:mean_small))
+select!(mean_b_frac, Not(:var_small))
+select!(mean_b_frac, Not(:sd_small))
+select!(mean_b_frac, Not(:mean_blight))
+select!(mean_b_frac, Not(:var_blight))
+select!(mean_b_frac, Not(:sd_blight))
+
+# False flag to check whether treatment produces mostly marketable
+sort!(mean_m_frac, :mean_m_frac, rev = true)
+sort!(mean_s_frac, :mean_s_frac, rev = false)
+sort!(mean_b_frac, :mean_b_frac, rev = false)
+
+# Show mean values
+display(mean_m_frac)
+display(mean_b_frac)
+display(mean_s_frac)
 
 
-normed_yield_m = gdf
-
-normed_yield_s
-normed_yield_b
+@df mean_m_frac groupedhist(:Treatment, bar_position = :stack)
 
 
 # Plot mean values per treatment
 gr(color_palette = :PuOr_4)
 p = scatter(
     gdf_market[!, :Treatment],
-    gdf_market[!, Symbol("Adjusted Marketable_mean")],
+    gdf_market[!, :mean],
     label = "",
     title = "Yields per Treatment",
     ylim = (0,25),
     xrotation = 50,
     framestyle = :semi,
     xlabel = "Treatment",
-    ylabel = "Mean [kg]\n ",
+    ylabel = " \nMean ± Std Dev [kg]\n ",
     legendfontsize = 7,
     legend = :topright
 )
 plot!([mean_b_water[1,2]], seriestype="hline", label="", color = :lightgray)
-@df gdf_market scatter!(cols(1), cols(2), label = "Market", yerr = [1,1,1,1,1,1,1,1,1,1,1,1,1] )
-@df gdf_small scatter!(cols(1), cols(2), label = "Small")
-@df gdf_blight scatter!(cols(1), cols(2), label = "Blighted")
-@df gdf_total scatter!(cols(1), cols(2), label = "Non-Blighted")
+@df gdf_market scatter!(cols(1), cols(2), label = "Marketable", yerr = cols(4))
+@df gdf_small scatter!(cols(1), cols(2), label = "Small", yerr = cols(4))
+@df gdf_blight scatter!(cols(1), cols(2), label = "Blighted", yerr = cols(4))
+# @df gdf_total scatter!(cols(1), cols(2), label = "Non-Blighted")
 Plots.savefig("scatter_absolute_yield_mean.png")
 
 
@@ -88,14 +149,7 @@ Plots.savefig("scatter_absolute_yield_mean.png")
 # Absolute Yield
 # --------------
 
-
-names_treaments = unique(maxi_plot[!,:Treatment])
-m_water = Vector{Float64}
-m_water = names_treatments
-]
- = mean_m_water[!,Symbol("Adjusted Marketable_mean")]
-
-# gr(color_palette = :PuOr_6, size = (900,600))
+gr(color_palette = :PuOr_6)
 p = plot(title = "Absolute Yields per Treatment",
          ylim = (0,25),
          xrotation = 45,
@@ -105,19 +159,6 @@ p = plot(title = "Absolute Yields per Treatment",
          legendfontsize = 7,
          legend = :topleft
 )
-
-
-p = plot(names_treaments,
-         ylim = (0,25),
-         xrotation = 45,
-         framestyle = :semi,
-         xlabel = "Treatment",
-         ylabel = "Yield [kg]",
-         legendfontsize = 7,
-         legend = :topleft
-)
-
-
 
 
 # Marketable
@@ -227,13 +268,8 @@ p = dotplot!(maxi_plot[!,:Treatment],
                         markersize = 7,
                         # marker=(:black, stroke(0)),
 )
-
-
+display(p)
 Plots.savefig("absolute_yield.png")
-
-
-gdf_small[:Water,Symbol("Adjusted Small_mean")]
-
 # ------------------------------------------------------------------------------
 # Proportional
 # ------------------------------------------------------------------------------
