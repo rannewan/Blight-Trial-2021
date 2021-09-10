@@ -1,4 +1,5 @@
-using DataFrames, RDatasets, CSV
+using DataFrames, RDatasets
+using CSV
 using Statistics, StatsBase, Bootstrap
 using Plots, StatsPlots, ColorSchemes
 
@@ -13,19 +14,45 @@ gdf_market  = sort( combine(gdf, Symbol("Adjusted Marketable") => mean ), Symbol
 gdf_small   = sort( combine(gdf, Symbol("Adjusted Small") => mean ), Symbol("Adjusted Small_mean"), rev = true)
 gdf_total   = sort( combine(gdf, Symbol("Adjusted Total") => mean ), Symbol("Adjusted Total_mean"), rev = true)
 
+# Calculate mean and variance of treatments
+gdf_blight  = combine(gdf, Symbol("Adjusted Blighted") =>  mean)
+display(combine(gdf, Symbol("Adjusted Blighted") =>  var))
+gdf_blight[!,:var] = combine(gdf, Symbol("Adjusted Blighted") =>  var)[:,2]
+rename!(gdf_blight, Symbol("Adjusted Blighted_mean") => :mean)
+
+gdf_market  = combine(gdf, Symbol("Adjusted Marketable") =>  mean)
+display(combine(gdf, Symbol("Adjusted Marketable") =>  var))
+gdf_market[!,:var] = combine(gdf, Symbol("Adjusted Marketable") =>  var)[:,2]
+rename!(gdf_market, Symbol("Adjusted Marketable_mean") => :mean)
+
+gdf_small  = combine(gdf, Symbol("Adjusted Small") =>  mean)
+display(combine(gdf, Symbol("Adjusted Small") =>  var))
+gdf_small[!,:var] = combine(gdf, Symbol("Adjusted Small") =>  var)[:,2]
+rename!(gdf_small, Symbol("Adjusted Small_mean") => :mean)
+
+gdf_total   = combine(gdf, Symbol("Adjusted Total") =>  mean)
+display(combine(gdf, Symbol("Adjusted Small") =>  var))
+gdf_total[!,:var] = combine(gdf, Symbol("Adjusted Total") =>  var)[:,2]
+rename!(gdf_total, Symbol("Adjusted Total_mean") => :mean)
+
+
 # Show mean values
-display(sort(gdf_blight,Symbol("Adjusted Blighted_mean"), rev = false) )
-display(sort(gdf_small,Symbol("Adjusted Small_mean"), rev = true) )
-display(sort(gdf_market,Symbol("Adjusted Marketable_mean"), rev = true) )
+display(sort(gdf_blight,:mean, rev = false) )
+display(sort(gdf_small,:mean, rev = true) )
+display(sort(gdf_market,:mean, rev = true) )
 
 # Query mean value of treatment "Water" through list comprehension
 mean_m_water = gdf_market[ [i in ["Manzate"] for i in gdf_market.Treatment ],: ]
 mean_b_water = gdf_blight[ [i in ["Manzate"] for i in gdf_blight.Treatment ],: ]
 mean_s_water = gdf_small[ [i in ["Manzate"] for i in gdf_small.Treatment ],: ]
 
-# Some statistics
+# Calculate v per treatment
 
-cil = 0.95
+
+normed_yield_m = gdf
+
+normed_yield_s
+normed_yield_b
 
 
 # Plot mean values per treatment
