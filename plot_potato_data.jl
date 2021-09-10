@@ -18,21 +18,25 @@ gdf_total   = sort( combine(gdf, Symbol("Adjusted Total") => mean ), Symbol("Adj
 gdf_blight  = combine(gdf, Symbol("Adjusted Blighted") =>  mean)
 display(combine(gdf, Symbol("Adjusted Blighted") =>  var))
 gdf_blight[!,:var] = combine(gdf, Symbol("Adjusted Blighted") =>  var)[:,2]
+gdf_blight[!,:sd] = combine(gdf, Symbol("Adjusted Blighted") =>  (s -> sqrt(var(s))))[:,2]
 rename!(gdf_blight, Symbol("Adjusted Blighted_mean") => :mean)
 
 gdf_market  = combine(gdf, Symbol("Adjusted Marketable") =>  mean)
 display(combine(gdf, Symbol("Adjusted Marketable") =>  var))
 gdf_market[!,:var] = combine(gdf, Symbol("Adjusted Marketable") =>  var)[:,2]
+gdf_market[!,:sd] = combine(gdf, Symbol("Adjusted Marketable") =>  (s -> sqrt(var(s))))[:,2]
 rename!(gdf_market, Symbol("Adjusted Marketable_mean") => :mean)
 
 gdf_small  = combine(gdf, Symbol("Adjusted Small") =>  mean)
 display(combine(gdf, Symbol("Adjusted Small") =>  var))
 gdf_small[!,:var] = combine(gdf, Symbol("Adjusted Small") =>  var)[:,2]
+gdf_small[!,:sd] = combine(gdf, Symbol("Adjusted Small") =>  (s -> sqrt(var(s))))[:,2]
 rename!(gdf_small, Symbol("Adjusted Small_mean") => :mean)
 
 gdf_total   = combine(gdf, Symbol("Adjusted Total") =>  mean)
 display(combine(gdf, Symbol("Adjusted Small") =>  var))
 gdf_total[!,:var] = combine(gdf, Symbol("Adjusted Total") =>  var)[:,2]
+gdf_total[!,:sd] = combine(gdf, Symbol("Adjusted Total") =>  (s -> sqrt(var(s))))[:,2]
 rename!(gdf_total, Symbol("Adjusted Total_mean") => :mean)
 
 
