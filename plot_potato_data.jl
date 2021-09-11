@@ -106,25 +106,47 @@ select!(mean_b_frac, Not(:mean_blight))
 select!(mean_b_frac, Not(:var_blight))
 select!(mean_b_frac, Not(:sd_blight))
 
-# False flag to check whether treatment produces mostly marketable
-sort!(mean_m_frac, :mean_m_frac, rev = true)
-sort!(mean_s_frac, :mean_s_frac, rev = false)
-sort!(mean_b_frac, :mean_b_frac, rev = false)
-
 # Show mean values
-display(mean_m_frac)
-display(mean_b_frac)
-display(mean_s_frac)
+display( sort(mean_m_frac, :mean_m_frac, rev = false))
+display( sort(mean_s_frac, :mean_s_frac, rev = true))
+display( sort(mean_b_frac, :mean_b_frac, rev = true))
 
 
-@df mean_m_frac groupedhist(:Treatment, bar_position = :stack)
+
+
+
+# False flag to check whether treatment produces mostly marketable
+sort!(mean_m_frac, :Treatment, rev = false)
+sort!(mean_s_frac, :Treatment, rev = false)
+sort!(mean_b_frac, :Treatment, rev = false)
+cnames = mean_m_frac[:, :Treatment]
+A = [mean_m_frac[:,2] mean_s_frac[:,2] mean_b_frac[:,2]]
+B = A[sortperm(A[:,3]), :]
+C = cnames[sortperm(A[:,3]), :]
+ctx = repeat(["Marketable", "Small", "Blighted"])
+
+
+# Plot stacked Diagram
+groupedbar(vec(C), B,
+           title = "Blight per Treatment",
+           bar_position = :stack,
+           xrotation = 45,
+           labels = "",
+           xlabel = "Treatment",
+           ylabel = "Fraction [-]",
+           # legend = :topright,
+           # group = ctx
+           )
+Plots.savefig("Blight_Proportion.png")
+
+
 
 
 # Plot mean values per treatment
 gr(color_palette = :PuOr_4)
 p = scatter(
-    gdf_market[!, :Treatment],
-    gdf_market[!, :mean],
+    # gdf_market[!, :Treatment],
+    # gdf_market[!, :mean],
     label = "",
     title = "Yields per Treatment",
     ylim = (0,25),
@@ -135,12 +157,48 @@ p = scatter(
     legendfontsize = 7,
     legend = :topright
 )
+@df gdf_market scatter!(cols(1), cols(2), label = "Marketable", yerr = cols(4), markersize = 5)
+@df gdf_small scatter!(cols(1), cols(2), label = "Small", yerr = cols(4), markersize = 5)
+@df gdf_blight scatter!(cols(1), cols(2), label = "Blighted", yerr = cols(4), markersize = 5)
 plot!([mean_b_water[1,2]], seriestype="hline", label="", color = :lightgray)
-@df gdf_market scatter!(cols(1), cols(2), label = "Marketable", yerr = cols(4))
-@df gdf_small scatter!(cols(1), cols(2), label = "Small", yerr = cols(4))
-@df gdf_blight scatter!(cols(1), cols(2), label = "Blighted", yerr = cols(4))
+# @df gdf_blight scatter!(cols(1), cols(2), label = "", yerr = cols(4))
+
+p = dotplot!(maxi_plot[!,:Treatment],
+                maxi_plot[!,Symbol("Adjusted Marketable")],
+                label = "",
+                marker=(:black, stroke(0)),
+                group = maxi_plot[!, :Treatment],
+                xrotation = 45,
+                markersize = 2,
+                xlabel = "Treatment",
+                # ylabel = "Mean of Yield [kg]",
+                # legend = false
+)
+p = dotplot!(maxi_plot[!,:Treatment],
+                maxi_plot[!,Symbol("Adjusted Small")],
+                label = "",
+                marker=(:black, stroke(0)),
+                group = maxi_plot[!, :Treatment],
+                xrotation = 45,
+                markersize = 2,
+                xlabel = "Treatment",
+                # ylabel = "Mean of Yield [kg]",
+                # legend = false
+)
+p = dotplot!(maxi_plot[!,:Treatment],
+              maxi_plot[!,Symbol("Adjusted Blighted")],
+              label = "",
+              marker=(:black, stroke(0)),
+              group = maxi_plot[!, :Treatment],
+              xrotation = 45,
+              markersize = 2,
+              xlabel = "Treatment",
+              # ylabel = "Yield [kg]",
+              # legend = false
+)
+
 # @df gdf_total scatter!(cols(1), cols(2), label = "Non-Blighted")
-Plots.savefig("scatter_absolute_yield_mean.png")
+Plots.savefig("yield_means.png")
 
 
 
@@ -149,8 +207,8 @@ Plots.savefig("scatter_absolute_yield_mean.png")
 # Absolute Yield
 # --------------
 
-gr(color_palette = :PuOr_6)
-p = plot(title = "Absolute Yields per Treatment",
+gr(color_palette = :PuOr_4)
+p = plot(title = "Yield per Treatment",
          ylim = (0,25),
          xrotation = 45,
          framestyle = :semi,
@@ -159,10 +217,6 @@ p = plot(title = "Absolute Yields per Treatment",
          legendfontsize = 7,
          legend = :topleft
 )
-
-
-# Marketable
-# ------------------------------------------------------------------------------
 p = boxplot!(maxi_plot[!,:Treatment],
               maxi_plot[!,Symbol("Adjusted Marketable")],
               label = "Market",
@@ -173,22 +227,6 @@ p = boxplot!(maxi_plot[!,:Treatment],
               # ylabel = "Mean of Yield [kg]",
               # legend = false
 )
-
-p = dotplot!(maxi_plot[!,:Treatment],
-              maxi_plot[!,Symbol("Adjusted Marketable")],
-              label = "",
-              marker=(:black, stroke(0)),
-              group = maxi_plot[!, :Treatment],
-              xrotation = 45,
-              markersize = 3,
-              xlabel = "Treatment",
-              # ylabel = "Mean of Yield [kg]",
-              # legend = false
-)
-
-
-# Small
-# ------------------------------------------------------------------------------
 p = boxplot!(maxi_plot[!,:Treatment],
               maxi_plot[!,Symbol("Adjusted Small")],
               label = "Small",
@@ -200,21 +238,6 @@ p = boxplot!(maxi_plot[!,:Treatment],
               # ylabel = "Mean of Yield [kg]",
               # legend = false
 )
-p = dotplot!(maxi_plot[!,:Treatment],
-              maxi_plot[!,Symbol("Adjusted Small")],
-              label = "",
-              marker=(:black, stroke(0)),
-              group = maxi_plot[!, :Treatment],
-              xrotation = 45,
-              markersize = 3,
-              xlabel = "Treatment",
-              # ylabel = "Mean of Yield [kg]",
-              # legend = false
-)
-
-# Blighted
-# ------------------------------------------------------------------------------
-
 p = boxplot!(maxi_plot[!,:Treatment],
               maxi_plot[!,Symbol("Adjusted Blighted")],
               label = "Blighted",
@@ -225,6 +248,29 @@ p = boxplot!(maxi_plot[!,:Treatment],
               xlabel = "Treatment",
               # ylabel = "Mean of Yield [kg]",
               # legend = false
+)
+
+p = dotplot!(maxi_plot[!,:Treatment],
+maxi_plot[!,Symbol("Adjusted Marketable")],
+label = "",
+marker=(:black, stroke(0)),
+group = maxi_plot[!, :Treatment],
+xrotation = 45,
+markersize = 3,
+xlabel = "Treatment",
+# ylabel = "Mean of Yield [kg]",
+# legend = false
+)
+p = dotplot!(maxi_plot[!,:Treatment],
+maxi_plot[!,Symbol("Adjusted Small")],
+label = "",
+marker=(:black, stroke(0)),
+group = maxi_plot[!, :Treatment],
+xrotation = 45,
+markersize = 3,
+xlabel = "Treatment",
+# ylabel = "Mean of Yield [kg]",
+# legend = false
 )
 p = dotplot!(maxi_plot[!,:Treatment],
               maxi_plot[!,Symbol("Adjusted Blighted")],
@@ -269,136 +315,4 @@ p = dotplot!(maxi_plot[!,:Treatment],
                         # marker=(:black, stroke(0)),
 )
 display(p)
-Plots.savefig("absolute_yield.png")
-# ------------------------------------------------------------------------------
-# Proportional
-# ------------------------------------------------------------------------------
-
-maxi_plot.cumValue = copy(maxi_plot."Adjusted Blighted")
-combine(maxi_plot, :Treatment) do dd
-    dd.cumValue .= cumsum(dd."Adjusted Blighted")/2.0
-    return
-end
-
-maxi_plot.cumValue
-maxi_plot."Adjusted Blighted"
-
-for subdf in groupby(maxi_plot, :Treatment)
-    subdf.cumValue .= cumsum(subdf."Adjusted Blighted")
-end
-display(maxi_plot)
-names(maxi_plot)
-
-p = plot(title = "Absolute Treatment Yields",
-         ylim = (0,25),
-         xrotation = 45,
-         framestyle = :semi,
-         xlabel = "Treatment",
-         ylabel = "Mean of Yield [kg]",
-         legendfontsize = 7,
-         legend = :topleft
-    )
-# p = violin!(maxi_plot[!,:Treatment],
-#                   maxi_plot[!,Symbol("Adjusted Marketable")],
-#                   linewidth = 0,
-#                   # group = maxi_plot[!, :Treatment],
-#                   xrotation = 45,
-#                   xlabel = "Treatment",
-#                   ylabel = "Mean of Yield [kg]",
-#                   legend = false
-# )
-p = boxplot!(maxi_plot[!,:Treatment],
-                  maxi_plot[!,Symbol("Adjusted Marketable")],
-                  label = "Market",
-                  fillalpha = 0.75,
-                  # linewidth = 2,
-                  xrotation = 45,
-                  xlabel = "Treatment",
-                  ylabel = "Mean of Yield [kg]",
-                  # legend = false
-)
-p = dotplot!(maxi_plot[!,:Treatment],
-                  maxi_plot[!,Symbol("Adjusted Marketable")],
-                  label = "",
-                  marker=(:black, stroke(0)),
-                  group = maxi_plot[!, :Treatment],
-                  xrotation = 45,
-                  xlabel = "Treatment",
-                  ylabel = "Mean of Yield [kg]",
-                  # legend = false
-)
-
-
-# Plot Small
-# ------------------------------------------------------------------------------
-p = boxplot!(maxi_plot[!,:Treatment],
-                  maxi_plot[!,Symbol("Adjusted Small")],
-                  label = "Small",
-                  fillalpha = 0.75,
-                  # linewidth = 2,
-                  # group = maxi_plot[!, :Treatment],
-                  xrotation = 45,
-                  xlabel = "Treatment",
-                  ylabel = "Mean of Yield [kg]",
-                  # legend = false
-)
-p = dotplot!(maxi_plot[!,:Treatment],
-                  maxi_plot[!,Symbol("Adjusted Small")],
-                  label = "",
-                  marker=(:black, stroke(0)),
-                  group = maxi_plot[!, :Treatment],
-                  xrotation = 45,
-                  xlabel = "Treatment",
-                  ylabel = "Mean of Yield [kg]",
-                  # legend = false
-)
-
-p = boxplot!(maxi_plot[!,:Treatment],
-                  maxi_plot[!,Symbol("Adjusted Blighted")],
-                  label = "Blighted",
-                  fillalpha = 0.75,
-                  # linewidth = 2,
-                  # group = maxi_plot[!, :Treatment],
-                  xrotation = 45,
-                  xlabel = "Treatment",
-                  ylabel = "Mean of Yield [kg]",
-                  # legend = false
-)
-p = dotplot!(maxi_plot[!,:Treatment],
-                  maxi_plot[!,Symbol("Adjusted Blighted")],
-                  label = "",
-                  marker=(:black, stroke(0)),
-                  group = maxi_plot[!, :Treatment],
-                  xrotation = 45,
-                  xlabel = "Treatment",
-                  ylabel = "Mean of Yield [kg]",
-                  # legend = false
-)
-
-
-
-@df gdf_market scatter!(cols(1),
-                        cols(2),
-                        label = "Mean",
-                        markershape = :star5,
-                        markersize = 7,
-                        # legend = true
-                        )
-@df gdf_small scatter!(cols(1),
-                        cols(2),
-                        label = "",
-                        markershape = :star5,
-                        markersize = 7,
-                        # marker=(:black, stroke(0)),
-)
-
-@df gdf_blight scatter!(cols(1),
-                        cols(2),
-                        label = "",
-                        markershape = :star5,
-                        markersize = 7,
-                        # marker=(:black, stroke(0)),
-)
-
-
-Plots.savefig("absolute_yield.png")
+Plots.savefig("yield.png")
