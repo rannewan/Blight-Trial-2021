@@ -368,9 +368,9 @@ function add_means_to_treatment_in_df(df)
     return df
 
 function plot_bar_for_all_maxiplots(df)
-    vec_m = df[:, Symbol("Adjusted Marketable")]
-    vec_b = df[:, Symbol("Adjusted Blighted")]
-    vec_s = df[:, Symbol("Adjusted Small")]
+    vec_m = df[:, :marketable]
+    vec_b = df[:, :blighted]
+    vec_s = df[:, :small]
     vec_t = df[:, :Treatment]
 
     ctg = repeat([
@@ -441,50 +441,10 @@ function plot_bar_for_all_maxiplots(df)
     Plots.savefig("yield_per_block_bar.png")
 
 end
-
-function plot_bar_for_single_maxiplot(df)
-    vec_m = df[:, Symbol("Adjusted Marketable")]
-    vec_b = df[:, Symbol("Adjusted Blighted")]
-    vec_s = df[:, Symbol("Adjusted Small")]
-    vec_t = df[:, :Treatment]
-
-    gdf  = groupby( maxi_plot, :Treatment)
-
-
-    ctg =[
-        "Marketable",
-        "Small",
-        "Blighted"
-        ]
-
-    gr(color_palette = :PuOr_4, size = (900,600))
-
-    l = @layout [a; b; c]
-
-    p1 = bar(
-        # nam1,
-        [ vec_m[1:1] vec_s[1:1] vec_b[1:1] ],
-        ylim = (0,25),
-        # group = ctg,
-        xrotation = 45,
-        framestyle = :grid,
-        title = "Yields per Plot",
-        xlabel = "",
-        ylabel = " \nBlock I\n ",
-        legendfontsize = 7,
-        legend = :topleft
-    )
-    plot(p1, dpi = 300)
-    # Plots.savefig("yield_per_plot_block_I.png")
-
-    # Plots.savefig("yield_per_block_bar.png")
-
-end
-
 function heatmap_for_yields(df)
-    vec_m = df[:, Symbol("Adjusted Marketable")]
-    vec_b = df[:, Symbol("Adjusted Blighted")]
-    vec_s = df[:, Symbol("Adjusted Small")]
+    vec_m = df[:, :marketable]
+    vec_b = df[:, :blighted]
+    vec_s = df[:, :small]
     vec_t = df[:, :Treatment]
 
     yield_m   = [ vec_m[1:12] vec_m[13:24] vec_m[25:36] ]'
@@ -506,7 +466,7 @@ function heatmap_for_yields(df)
     l = @layout [a; b; c]
     l2x1 = @layout [a; b]
     p1 = heatmap(
-        xs, ys,
+        xs, ys
         yield_m,
         aspect_ratio = :equal,
         title = "Spatial Distribution of Yield (in kg)",
@@ -550,9 +510,102 @@ function heatmap_for_yields(df)
 
 end
 
-df = maxi_plot
+function plot_bar_for_single_maxiplot(df)
+    vec_m = df[:, :marketable]
+    vec_b = df[:, :blighted]
+    vec_s = df[:, :small]
+    vec_t = df[:, :Treatment]
+
+    gdf  = groupby( df, :Treatment)
+    p = Plots.Plot{Plots.GRBackend}[]
+
+    # sort!(gdf, [order(:Treatment), order])
+    for i in 1:13
+        # i = 1
+        @show i
+        test = [gdf[i][:,2] gdf[i][:,3] gdf[i][:,4]]
+        size(test, 1)
+        test_m = mean(test, dims = 1)
+
+        xs = repeat(["Block I", "Block II", "Block III"], outer = size(test, 2))
+
+        ctg =repeat([
+            "Blighted",
+            "Marketable",
+            "Small"
+            ], inner = size(test, 1))
+
+        gr(color_palette = :PuOr_4, size = (300,400))
+
+        l = @layout [a{0.77w} b;]
+
+        p1 = groupedbar(
+            xs,
+            test,
+            ylim = (0,25),
+            group = ctg,
+            # xrotation = 45,
+            bar_position = :stack,
+            framestyle = :grid,
+            title = vec_t[i],
+            xlabel = "",
+            # xticks = xs,
+            ylabel = " \nYield [kg]",
+            legendfontsize = 7,
+            legend = false
+        )
+
+        p2 = groupedbar(
+            ["Average"],
+            test_m,
+            # [1 2 3 4],
+            ylim = (0,25),
+            bar_position = :stack,
+            framestyle = :grid,
+            yticks = false,
+            legend = false
+
+        )
+        px = plot(p1, p2, dpi = 300, layout = l)
+        push!(p, px)
+
+        Plots.savefig("yield_per_treatment_" .* vec_t[i] .* ".png")
+
+        # Plots.savefig("yield_per_block_bar.png")
+    end
+    gr(size = (1200,3000))
+
+    # lx = @layout [grid(2,7)]
+    plot(p...)
+end
+
+function read_clean_dataframe(f)
+    df = CSV.read(f,
+        header = 1,
+        normalizenames = true,
+        drop = [1],
+        skipto = 3,
+        DataFrame,
+        missingstrings=["NA", "na", "n/a", "missing"]
+    )
+    dropmissing!(df)
+    select!(df, Not(:Blighted_I))
+    select!(df, Not(:Blighted_II))
+    select!(df, Not(:Marketable))
+    select!(df, Not(:Small))
+    select!(df, Not(:Total_Blighted))
+    select!(df, Not(:Total))
+    select!(df, Not(:Notes))
+    rename!(df, :Adjusted_Marketable => :marketable)
+    rename!(df, :Adjusted_Blighted => :blighted)
+    rename!(df, :Adjusted_Small => :small)
+    rename!(df, :Adjusted_Total => :non_blighted)
+
+    return df
+end
 
 
+df = read_clean_dataframe("Potato Trial Spraying - Yield Max.csv")
 plot_bar_for_all_maxiplots(df)
 heatmap_for_yields(df)
 plot_bar_for_single_maxiplot(df)
