@@ -437,7 +437,7 @@ function plot_bar_for_all_maxiplots(df)
     )
     # Plots.savefig("yield_per_plot_block_III.png")
 
-    plot(p1, p2, p3, layout = l)
+    plot(p1, p2, p3, layout = l, dpi = 300)
     Plots.savefig("yield_per_block_bar.png")
 
 end
@@ -474,6 +474,7 @@ function plot_bar_for_single_maxiplot(df)
         legendfontsize = 7,
         legend = :topleft
     )
+    plot(p1, dpi = 300)
     # Plots.savefig("yield_per_plot_block_I.png")
 
     # Plots.savefig("yield_per_block_bar.png")
@@ -503,27 +504,30 @@ function heatmap_for_yields(df)
 
 
     l = @layout [a; b; c]
+    l2x1 = @layout [a; b]
     p1 = heatmap(
-        # xs, ys,
+        xs, ys,
         yield_m,
         aspect_ratio = :equal,
-        title = "Spatial Distribution of Yield",
+        title = "Spatial Distribution of Yield (in kg)",
         # xlabel = "Plot",
         framestyle = :grid,
-        ticks = false,
+        ticks = true,
+        xticks = false,
         ylabel = "Marketable"
         # yrotation = 90,
     )
     # annotate!(ann, linecolor=:white)
 
     p2 = heatmap(
-        # xs, ys,
+        xs, ys,
         yield_b,
         aspect_ratio = 1,
         # title = "Spatial Distribution of Yield",
         # xlabel = "Plot",
         framestyle = :grid,
-        ticks = false,
+        ticks = true,
+        xticks = true,
         ylabel = "Blighted",
         # yrotation = 90,
     )
@@ -540,8 +544,9 @@ function heatmap_for_yields(df)
         # yrotation = 90,
     )
 
-    plot(p1, p2, p3, layout = l)
-    # Plots.savefig("yield_per_block_heatmap.png")
+    # plot(p1, p2, p3, layout = l)
+    plot(p1, p2, layout = l2x1, dpi = 300)
+    Plots.savefig("yield_per_block_heatmap.png")
 
 end
 
