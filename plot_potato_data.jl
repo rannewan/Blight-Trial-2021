@@ -4,6 +4,7 @@ using DataFrames, RDatasets
 using CSV
 using Statistics, StatsBase, Bootstrap
 using Plots, StatsPlots, ColorSchemes
+using CategoricalArrays
 
 # Read data and group into treatments
 maxi_plot = CSV.read("Potato Trial Spraying - Yield Max.csv", header = 1, skipto = 3, DataFrame, missingstrings=["NA", "na", "n/a", "missing"])
@@ -126,7 +127,7 @@ C = cnames[sortperm(A[:,3]), :]
 ctx = repeat(["Marketable", "Small", "Blighted"])
 
 
-# Plot stacked Diagram
+# Blight per Treatment
 groupedbar(vec(C), B,
            title = "Blight per Treatment",
            bar_position = :stack,
@@ -134,13 +135,29 @@ groupedbar(vec(C), B,
            labels = "",
            xlabel = "Treatment",
            ylabel = "Fraction [-]",
-           # legend = :topright,
+           framestyle = :semi,
+           # series_annotations = "test", "test1"
+           legend = true,
            # group = ctx
            )
 Plots.savefig("Blight_Proportion.png")
 
 
-
+# Yield per Treatment
+E = A[sortperm(A[:,1], rev= true), :]
+F = cnames[sortperm(A[:,1], rev = true), :]
+groupedbar(vec(F), E,
+           title = "Yield per Treatment",
+           bar_position = :stack,
+           xrotation = 45,
+           labels = "",
+           xlabel = "Treatment",
+           ylabel = "Fraction [-]",
+           framestyle = :semi,
+           # legend = :topright,
+           # group = ctx
+           )
+Plots.savefig("Yield_Proportion.png")
 
 # Plot mean values per treatment
 gr(color_palette = :PuOr_4)
@@ -251,26 +268,26 @@ p = boxplot!(maxi_plot[!,:Treatment],
 )
 
 p = dotplot!(maxi_plot[!,:Treatment],
-maxi_plot[!,Symbol("Adjusted Marketable")],
-label = "",
-marker=(:black, stroke(0)),
-group = maxi_plot[!, :Treatment],
-xrotation = 45,
-markersize = 3,
-xlabel = "Treatment",
-# ylabel = "Mean of Yield [kg]",
-# legend = false
+    maxi_plot[!,Symbol("Adjusted Marketable")],
+    label = "",
+    marker=(:black, stroke(0)),
+    group = maxi_plot[!, :Treatment],
+    xrotation = 45,
+    markersize = 3,
+    xlabel = "Treatment",
+    # ylabel = "Mean of Yield [kg]",
+    # legend = false
 )
 p = dotplot!(maxi_plot[!,:Treatment],
-maxi_plot[!,Symbol("Adjusted Small")],
-label = "",
-marker=(:black, stroke(0)),
-group = maxi_plot[!, :Treatment],
-xrotation = 45,
-markersize = 3,
-xlabel = "Treatment",
-# ylabel = "Mean of Yield [kg]",
-# legend = false
+    maxi_plot[!,Symbol("Adjusted Small")],
+    label = "",
+    marker=(:black, stroke(0)),
+    group = maxi_plot[!, :Treatment],
+    xrotation = 45,
+    markersize = 3,
+    xlabel = "Treatment",
+    # ylabel = "Mean of Yield [kg]",
+    # legend = false
 )
 p = dotplot!(maxi_plot[!,:Treatment],
               maxi_plot[!,Symbol("Adjusted Blighted")],
@@ -316,3 +333,221 @@ p = dotplot!(maxi_plot[!,:Treatment],
 )
 display(p)
 Plots.savefig("yield.png")
+
+df_ = maxi_plot
+
+@pipe df_ |> groupby(_, :Treatment)
+
+
+# ------------------------------------------------------------------------------
+# Barpot for individual plots
+# ------------------------------------------------------------------------------
+
+#
+# df = DataFrame(time = [0, 1, 0, 1, 0, 1]
+#     , amt = [19.00, 11.00, 35.50, 32.50, 5.99, 5.99]
+#     , item = ["B001", "B001", "B020", "B020", "BX00", "BX00"])
+#     using StatsBase, Query
+#     using Pipe
+#
+#     @pipe df |> groupby(_, :item) |>
+#          combine(_, :time, :amt, :item, :item => (x -> rand()) => :rando) |>
+#          sort(_, :rando) |>
+#          transform(_, :rando => denserank => :rnk_rnd)
+
+
+select(gdf, Symbol("Blighted I"))
+
+for i in maxi_plot
+    maxi_plot[i,:Treatment]
+end
+
+function add_means_to_treatment_in_df(df)
+
+
+    return df
+
+function plot_bar_for_all_maxiplots(df)
+    vec_m = df[:, Symbol("Adjusted Marketable")]
+    vec_b = df[:, Symbol("Adjusted Blighted")]
+    vec_s = df[:, Symbol("Adjusted Small")]
+    vec_t = df[:, :Treatment]
+
+    ctg = repeat([
+        "Marketable",
+        "Small",
+        "Blighted"
+        ], inner = 12*1)
+
+    # nam1 = CategoricalArray(vec_t[1:12])
+    gr(color_palette = :PuOr_4, size = (900,600))
+
+
+    # nam1 = copy(vec_t)
+    # for i in 1:12
+    #     nam1[i] = string(i) .* ": " .* vec_t[i]
+    # end
+    # nam = repeat(nam1, outer = 3 )
+    #
+
+
+    l = @layout [a; b; c]
+    p1 = groupedbar(
+        # nam1,
+        [ vec_m[1:12] vec_s[1:12] vec_b[1:12] ],
+        ylim = (0,25),
+        group = ctg,
+        xrotation = 45,
+        framestyle = :grid,
+        title = "Yields per Plot",
+        xlabel = "",
+        ylabel = " \nBlock I\n ",
+        legendfontsize = 7,
+        legend = :topleft
+    )
+    # Plots.savefig("yield_per_plot_block_I.png")
+
+    p2 = groupedbar(
+        [ vec_m[13:24] vec_s[13:24] vec_b[13:24] ],
+        ylim = (0,25),
+        group = ctg,
+        xrotation = 45,
+        framestyle = :grid,
+        # title = "Block II",
+        xlabel = "",
+        ylabel = " \nBlock II\nYield [kg]",
+        legendfontsize = 7,
+        # legend = :topleft,
+        legend = false
+    )
+    # Plots.savefig("yield_per_plot_block_II.png")
+
+    p3 = groupedbar(
+        [ vec_m[25:36] vec_s[25:36] vec_b[25:36] ],
+        ylim = (0,25),
+        group = ctg,
+        xrotation = 45,
+        framestyle = :grid,
+        # title = "Block III",
+        xlabel = "Plot",
+        ylabel = " \nBlock III\n ",
+        legendfontsize = 7,
+        # legend = :topleft,
+        legend = false
+    )
+    # Plots.savefig("yield_per_plot_block_III.png")
+
+    plot(p1, p2, p3, layout = l)
+    Plots.savefig("yield_per_block_bar.png")
+
+end
+
+function plot_bar_for_single_maxiplot(df)
+    vec_m = df[:, Symbol("Adjusted Marketable")]
+    vec_b = df[:, Symbol("Adjusted Blighted")]
+    vec_s = df[:, Symbol("Adjusted Small")]
+    vec_t = df[:, :Treatment]
+
+    gdf  = groupby( maxi_plot, :Treatment)
+
+
+    ctg =[
+        "Marketable",
+        "Small",
+        "Blighted"
+        ]
+
+    gr(color_palette = :PuOr_4, size = (900,600))
+
+    l = @layout [a; b; c]
+
+    p1 = bar(
+        # nam1,
+        [ vec_m[1:1] vec_s[1:1] vec_b[1:1] ],
+        ylim = (0,25),
+        # group = ctg,
+        xrotation = 45,
+        framestyle = :grid,
+        title = "Yields per Plot",
+        xlabel = "",
+        ylabel = " \nBlock I\n ",
+        legendfontsize = 7,
+        legend = :topleft
+    )
+    # Plots.savefig("yield_per_plot_block_I.png")
+
+    # Plots.savefig("yield_per_block_bar.png")
+
+end
+
+function heatmap_for_yields(df)
+    vec_m = df[:, Symbol("Adjusted Marketable")]
+    vec_b = df[:, Symbol("Adjusted Blighted")]
+    vec_s = df[:, Symbol("Adjusted Small")]
+    vec_t = df[:, :Treatment]
+
+    yield_m   = [ vec_m[1:12] vec_m[13:24] vec_m[25:36] ]'
+    yield_b  = [ vec_b[1:12] vec_b[13:24] vec_b[25:36] ]'
+    yield_s = [ vec_s[1:12] vec_s[13:24] vec_s[25:36] ]'
+
+    xs = [string(i) for i = 1:12]
+    ys = ["I", "II", "III"]
+
+    gr(color_palette = :PuOr_10)
+
+    # fontsize = 6
+    # nrow, ncol = size(yield_m)
+    # ann = [(j,i, text(round(yield_m[i,j], digits=0), fontsize, :white, :center))
+    #         for j in 1:nrow for j in 1:ncol]
+    #
+
+
+    l = @layout [a; b; c]
+    p1 = heatmap(
+        # xs, ys,
+        yield_m,
+        aspect_ratio = :equal,
+        title = "Spatial Distribution of Yield",
+        # xlabel = "Plot",
+        framestyle = :grid,
+        ticks = false,
+        ylabel = "Marketable"
+        # yrotation = 90,
+    )
+    # annotate!(ann, linecolor=:white)
+
+    p2 = heatmap(
+        # xs, ys,
+        yield_b,
+        aspect_ratio = 1,
+        # title = "Spatial Distribution of Yield",
+        # xlabel = "Plot",
+        framestyle = :grid,
+        ticks = false,
+        ylabel = "Blighted",
+        # yrotation = 90,
+    )
+
+    p3 = heatmap(
+        xs, ys,
+        yield_s,
+        aspect_ratio = 1,
+        # title = "Spatial Distribution of Yield",
+        xlabel = "Plot",
+        framestyle = :grid,
+        ticks = true,
+        ylabel = "Small"
+        # yrotation = 90,
+    )
+
+    plot(p1, p2, p3, layout = l)
+    # Plots.savefig("yield_per_block_heatmap.png")
+
+end
+
+df = maxi_plot
+
+
+plot_bar_for_all_maxiplots(df)
+heatmap_for_yields(df)
+plot_bar_for_single_maxiplot(df)
